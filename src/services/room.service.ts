@@ -1,3 +1,4 @@
+// managa rooms and applied logic using roomStore.ts data 
 import { v4 as uuidv4 } from 'uuid';
 
 export type RoomStatus = 'waiting' | 'active' | 'finished';

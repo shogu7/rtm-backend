@@ -1,3 +1,4 @@
+// expose method for room used by my room.service.ts (mainly return data)
 export type RoomStatus = 'waiting' | 'playing' | 'finished';
 
 // interface for every room
@@ -15,19 +16,28 @@ export interface Room {
 class RoomStore {
   private rooms = new Map<string, Room>();
 
+  // method to create and store a new room
   create(room: Room) {
     this.rooms.set(room.roomId, room);
     return room;
   }
 
+  // method to get room by its code
+  getByCode(code: string) {
+    return [...this.rooms.values()].find(r => r.roomCode === code);
+  }
+
+  // method to get room by its ID
   get(roomId: string) {
     return this.rooms.get(roomId);
   }
 
+  // method to check if a room exist or not
   exists(roomId: string) {
     return this.rooms.has(roomId);
   }
 
+  // method to update a room's data
   update(roomId: string, data: Partial<Room>) {
     const room = this.rooms.get(roomId);
     if (!room) return null;
