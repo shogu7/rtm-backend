@@ -4,6 +4,7 @@ import { roomStore } from '../store/roomStore';
 
 const router = Router();
 
+// endpoint to create a new room
 router.post('/', (req, res) => {
     const { hostUserId, maxPlayers } = req.body;
 
@@ -21,5 +22,28 @@ router.post('/', (req, res) => {
     roomStore.create(room); // store the room
     res.json(room);
 });
+
+// endpoint to get room by code
+router.get('/id/:roomId', (req, res) => {
+    const { roomId } = req.params;
+
+    const room = roomStore.get(roomId);
+
+    if (!room) {
+        res.status(404).json({ message: 'Room introuvable' });
+        return;
+    }
+    
+
+    res.json({
+        roomId: room.roomId,
+        roomCode: room.roomCode,
+        hostUserId: room.hostUserId,
+        players: room.players,
+        maxPlayers: room.maxPlayers,
+        status: room.status,
+    });
+});
+
 
 export default router;
