@@ -131,7 +131,7 @@ export function onGameSocket(io: Server) {
         phase: 'startGame', // <-- ajoute la phase ici
       });
 
-      // si la mise à jour a échoué, on stop
+      // if the update failed, emit an error
       if (!updatedRoom) {
         socket.emit('errorMessage', { message: 'Impossible de démarrer la partie' });
         return;
