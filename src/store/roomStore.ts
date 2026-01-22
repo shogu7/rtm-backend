@@ -37,6 +37,11 @@ class RoomStore {
     return this.rooms.has(roomId);
   }
 
+  // method to delete a room
+  delete(roomId: string) {
+    return this.rooms.delete(roomId);
+  }
+
   // method to update a room's data
   update(roomId: string, data: Partial<Room>) {
     const room = this.rooms.get(roomId);
