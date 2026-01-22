@@ -1,5 +1,6 @@
 // expose method for room used by my room.service.ts (mainly return data)
 export type RoomStatus = 'waiting' | 'playing' | 'finished';
+type RoomPhase = 'waiting' | 'startGame' | 'remakeMeme' | 'ended';
 
 // interface for every room
 export interface Room {
@@ -10,6 +11,7 @@ export interface Room {
   players: string[];
   status: RoomStatus;
   createdAt: string;
+  phase: RoomPhase;
 }
 
 // Singleton class to manage rooms in-memory

@@ -17,6 +17,7 @@ router.post('/', (req, res) => {
         maxPlayers,
         players: [hostUserId],
         status: 'waiting' as const,
+        phase: 'waiting' as const,
         createdAt: new Date().toISOString(),
     };
 
