@@ -33,7 +33,11 @@ export function onGameSocket(io: Server) {
         socket.join(roomId);
         socket.data.userId = userId;
         socket.data.roomId = roomId;
-        socket.emit('roomData', { players: room.players.map(p => ({ userId: p })) });
+        socket.emit('roomData', {
+          players: room.players.map(p => ({ userId: p })),
+          status: room.status,
+          phase: (room as any).phase,
+        });
         return;
       }
 
@@ -58,6 +62,8 @@ export function onGameSocket(io: Server) {
       io.to(roomId).emit('roomData', {
         // for each player, send an object with userId
         players: room.players.map((p) => ({ userId: p })),
+        status: room.status,
+        phase: (room as any).phase,
       });
 
       console.log(`[joinRoom] ${userId} joined room ${roomId}`);
@@ -94,8 +100,13 @@ export function onGameSocket(io: Server) {
         roomStore.update(roomId, { players: updatedPlayers });
       }
 
+      const updatedRoom = roomStore.get(roomId);
+      if (!updatedRoom) return;
+
       io.to(roomId).emit('roomData', {
         players: updatedPlayers.map(p => ({ userId: p })),
+        status: updatedRoom.status,
+        phase: (updatedRoom as any).phase,
       });
     });
     //#endregion
@@ -121,6 +132,10 @@ export function onGameSocket(io: Server) {
 
       // the game can only be started if the room is in 'waiting' status
       if (room.status !== 'waiting') {
+        console.log('[startGame]', {
+          roomId,
+          currentStatus: room.status,
+        });
         socket.emit('errorMessage', { message: 'The game has already started' });
         return;
       }
@@ -128,7 +143,7 @@ export function onGameSocket(io: Server) {
       // update the room status AND phase
       const updatedRoom = roomStore.update(roomId, {
         status: 'playing',
-        phase: 'startGame', // <-- ajoute la phase ici
+        phase: 'startGame',
       });
 
       // if the update failed, emit an error
@@ -139,9 +154,9 @@ export function onGameSocket(io: Server) {
 
       // emit the updated room to all clients
       io.to(roomId).emit('roomData', {
-        ...updatedRoom,
-        players: updatedRoom.players.map(p => ({ userId: p })), 
-        phase: updatedRoom.phase, 
+        players: updatedRoom.players.map(p => ({ userId: p })),
+        status: updatedRoom.status,
+        phase: updatedRoom.phase,
       });
 
       console.log(`[startGame] the game has started in room ${roomId}`);
