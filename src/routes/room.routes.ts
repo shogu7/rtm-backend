@@ -19,9 +19,17 @@ router.post('/', (req, res) => {
         status: 'waiting' as const,
         phase: 'waiting' as const,
         createdAt: new Date().toISOString(),
+        currentMeme: null, 
     };
 
     roomStore.create(room); // store the room
+    console.log('[room] created', {
+        roomId: room.roomId,
+        roomCode: room.roomCode,
+        hostUserId: room.hostUserId,
+        maxPlayers: room.maxPlayers,
+        status: room.status,
+    });
     res.json(room);
 });
 
@@ -66,6 +74,7 @@ router.get('/code/:roomCode', (req, res) => {
     players: room.players,
     maxPlayers: room.maxPlayers,
     status: room.status,
+    currentMeme: null, 
   });
 });
 

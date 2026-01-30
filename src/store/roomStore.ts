@@ -1,6 +1,14 @@
+import { memeRouter } from './../routes/meme.routes';
 // expose method for room used by my room.service.ts (mainly return data)
 export type RoomStatus = 'waiting' | 'playing' | 'finished';
 type RoomPhase = 'waiting' | 'startGame' | 'remakeMeme' | 'ended';
+
+// interface for meme data
+export interface Meme {
+  id: number;
+  videoUrl: string;
+  title?: string | null;
+}
 
 // interface for every room
 export interface Room {
@@ -12,6 +20,7 @@ export interface Room {
   status: RoomStatus;
   createdAt: string;
   phase: RoomPhase;
+  currentMeme: Meme | null;
 }
 
 // Singleton class to manage rooms in-memory

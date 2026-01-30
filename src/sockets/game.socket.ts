@@ -1,10 +1,18 @@
 import { Server, Socket } from 'socket.io';
 import { roomStore } from '../store/roomStore';
+import { pickRandomMeme } from '../services/meme.service';
 
 // payload interface for joinRoom event
 interface JoinRoomPayload {
   userId: string;
   roomId: string;
+}
+
+const userRoomSockets = new Map<string, string>();
+
+// generate a unique key for each user-room combination
+function getUserRoomKey(userId: string, roomId: string) {
+  return `${roomId}:${userId}`;
 }
 
 //#region:each time a client connects, this function sets up the event handlers
@@ -28,6 +36,17 @@ export function onGameSocket(io: Server) {
         return;
       }
 
+      const userRoomKey = getUserRoomKey(userId, roomId);
+      const existingSocketId = userRoomSockets.get(userRoomKey);
+      if (existingSocketId && existingSocketId !== socket.id) {
+        const existingSocket = io.sockets.sockets.get(existingSocketId);
+        if (existingSocket) {
+          existingSocket.leave(roomId);
+          existingSocket.disconnect(true);
+        }
+      }
+      userRoomSockets.set(userRoomKey, socket.id);
+
       // if the user is already in the room, just join the socket to the room and emit current data
       if (room.players.includes(userId)) {
         socket.join(roomId);
@@ -37,6 +56,7 @@ export function onGameSocket(io: Server) {
           players: room.players.map(p => ({ userId: p })),
           status: room.status,
           phase: (room as any).phase,
+          meme: room.currentMeme ?? null,
         });
         return;
       }
@@ -64,6 +84,7 @@ export function onGameSocket(io: Server) {
         players: room.players.map((p) => ({ userId: p })),
         status: room.status,
         phase: (room as any).phase,
+        meme: room.currentMeme ?? null,
       });
 
       console.log(`[joinRoom] ${userId} joined room ${roomId}`);
@@ -77,6 +98,11 @@ export function onGameSocket(io: Server) {
       const { userId, roomId } = socket.data;
       if (!userId || !roomId) return;
 
+      const userRoomKey = getUserRoomKey(userId, roomId);
+      if (userRoomSockets.get(userRoomKey) === socket.id) {
+        userRoomSockets.delete(userRoomKey);
+      }
+
       const room = roomStore.get(roomId);
       if (!room) return;
 
@@ -84,6 +110,7 @@ export function onGameSocket(io: Server) {
 
       if (room.hostUserId === userId) {
         if (updatedPlayers.length === 0) {
+          console.log('[room] deleted (host left, empty)', { roomId, hostUserId: userId });
           roomStore.delete(roomId);
           return;
         } else {
@@ -107,12 +134,13 @@ export function onGameSocket(io: Server) {
         players: updatedPlayers.map(p => ({ userId: p })),
         status: updatedRoom.status,
         phase: (updatedRoom as any).phase,
+        meme: updatedRoom.currentMeme ?? null,
       });
     });
     //#endregion
 
     //#region:event to start the game
-    socket.on('startGame', (payload: { userId: string; roomId: string }) => {
+    socket.on('startGame', async (payload: { userId: string; roomId: string }) => {
       const { userId, roomId } = payload;
       const room = roomStore.get(roomId);
 
@@ -136,8 +164,24 @@ export function onGameSocket(io: Server) {
           roomId,
           currentStatus: room.status,
         });
-        socket.emit('errorMessage', { message: 'The game has already started' });
+        socket.emit('roomData', {
+          players: room.players.map(p => ({ userId: p })), // for each player, send an object with userId
+          status: room.status, // current status
+          phase: (room as any).phase, // current phase
+          meme: room.currentMeme ?? null, // current meme
+        });
         return;
+      }
+
+      if (!room.currentMeme) {
+        try {
+          const meme = await pickRandomMeme();
+          roomStore.update(roomId, { currentMeme: meme });
+        } catch (err) {
+          console.error('[startGame] pickRandomMeme failed:', err);
+          socket.emit('errorMessage', { message: 'No memes available' });
+          return;
+        }
       }
 
       // update the room status AND phase
@@ -157,10 +201,15 @@ export function onGameSocket(io: Server) {
         players: updatedRoom.players.map(p => ({ userId: p })),
         status: updatedRoom.status,
         phase: updatedRoom.phase,
+        meme: updatedRoom.currentMeme ?? null,
       });
 
-      console.log(`[startGame] the game has started in room ${roomId}`);
+      console.log('[startGame] started', {
+        roomId,
+        memeId: updatedRoom.currentMeme?.id ?? null,
+      });
     });
 
   });
+  //#endregion
 }
